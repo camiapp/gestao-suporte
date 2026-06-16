@@ -1,0 +1,8 @@
+# Arquivos locais / internos — não vão para o GitHub/Vercel.
+# Só o index.html (que o Vercel publica) é versionado.
+gestao_suporte.html
+gestao_suporte_jsdo.txt
+ANOTACOES.md
+AZURE_MICROSOFT_SETUP.md
+automacao_email_diario.gs
+email_microsoft.gs
