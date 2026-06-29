@@ -433,6 +433,10 @@ tbody tr.row-atrasado:hover td{background:#FFF0F0;}
           <div class="legend-row" id="indLegendResp"></div>
           <div style="position:relative;height:220px"><canvas id="chartIndResp" role="img"></canvas></div>
         </div>
+        <div class="section-card">
+          <div class="section-hdr"><div><div class="section-title">Aberturas por dia da semana</div><div class="section-sub">Distribuição dos chamados abertos por dia da semana no período</div></div><span style="font-size:11px;color:var(--blue);font-weight:600" id="indDiaSemanaLabel"></span></div>
+          <div style="position:relative;height:220px"><canvas id="chartIndDiaSemana" role="img"></canvas></div>
+        </div>
         <div style="margin-bottom:14px"></div>
 
         <!-- INDICADORES DE RESOLUÇÃO -->
@@ -458,7 +462,7 @@ tbody tr.row-atrasado:hover td{background:#FFF0F0;}
 const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbzDRwW4LbYcnfaM384cmmEIixzTYZP9pqoC1TP9AoJaJE-vksLbpMc8aV2zLQzgMvWSJw/exec';
 const STATUS_ABERTOS=['triagem','aguardando solicitante','atendimento'];
 const CHART_COLORS=['#2D5BE3','#7C3AED','#16A34A','#D97706','#DC2626','#0891B2','#EA580C','#9333EA'];
-let chartTipo=null,chartResp=null,chartEvolucao=null,chartIndTipos=null,chartIndResp=null;
+let chartTipo=null,chartResp=null,chartEvolucao=null,chartIndTipos=null,chartIndResp=null,chartIndDiaSemana=null;
 let allTasks=[],activeStatus='all';
 let indTasks=[],indEmpresaSelecionada=null,indEmpresasSelecionadas=[],indTiposSelecionados=[];
 
@@ -813,7 +817,7 @@ function getIndFiltered(){
   return base;
 }
 function renderIndicadores(){renderIndEmpresaChips();renderIndAll(getIndFiltered());}
-function renderIndAll(tasks){renderIndKPIs(tasks);renderIndEvolucao(tasks);renderIndRanking(tasks);renderIndTipos(tasks,true);renderIndResp(tasks);renderIndResolucao(tasks);}
+function renderIndAll(tasks){renderIndKPIs(tasks);renderIndEvolucao(tasks);renderIndRanking(tasks);renderIndTipos(tasks,true);renderIndResp(tasks);renderIndDiaSemana(tasks);renderIndResolucao(tasks);}
 
 let _resolData=[];let _resolPage=0;const _resolPerPage=10;
 
@@ -1139,6 +1143,38 @@ function renderIndResp(tasks){
   });
 }
 
+function renderIndDiaSemana(tasks){
+  var nomes=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  var ordem=[1,2,3,4,5,6,0]; // segunda -> domingo
+  var counts=[0,0,0,0,0,0,0];
+  tasks.forEach(function(t){ if(t.date_created){ var d=new Date(Number(t.date_created)).getDay(); counts[d]++; } });
+  var labels=ordem.map(function(d){return nomes[d];});
+  var data=ordem.map(function(d){return counts[d];});
+  var maxVal=Math.max.apply(null,data);
+  var cores=data.map(function(v){return (v===maxVal&&maxVal>0)?'#2D5BE3':'#A9C3F5';});
+  var labelEl=document.getElementById('indDiaSemanaLabel');
+  if(labelEl){labelEl.textContent=maxVal>0?('Maior volume: '+labels[data.indexOf(maxVal)]+' ('+maxVal+')'):'';}
+  if(chartIndDiaSemana)chartIndDiaSemana.destroy();
+  var canvas=document.getElementById('chartIndDiaSemana');
+  if(!canvas)return;
+  chartIndDiaSemana=new Chart(canvas,{
+    type:'bar',
+    data:{labels:labels,datasets:[{data:data,backgroundColor:cores,borderWidth:0,borderRadius:6}]},
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:function(ctx){return ctx.parsed.y+' chamado'+(ctx.parsed.y!==1?'s':'')}}}
+      },
+      scales:{
+        x:{ticks:{font:{size:11,family:'Inter'},color:'#9BA5B5',autoSkip:false},grid:{display:false},border:{display:false}},
+        y:{beginAtZero:true,ticks:{font:{size:11},color:'#9BA5B5',stepSize:1,precision:0},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}}
+      }
+    }
+  });
+}
+
 function renderIndTipos(tasks,useBase){
   var base=useBase?getIndFilteredSemTipo():tasks;
   var tipoCounts={};
@@ -1209,6 +1245,7 @@ function toggleTipo(nome){
   renderIndRanking(filtered);
   renderIndTipos(filtered,true);
   renderIndResp(filtered);
+  renderIndDiaSemana(filtered);
   renderIndResolucao(filtered);
 }
 
