@@ -1177,12 +1177,15 @@ function renderIndDiaSemana(tasks){
   if(chartIndDiaSemana)chartIndDiaSemana.destroy();
   var canvas=document.getElementById('chartIndDiaSemana');
   if(!canvas)return;
+  var barLabelPlugin={id:'barLabelDiaSemana',afterDatasetsDraw:function(chart){var ctx=chart.ctx;var meta=chart.getDatasetMeta(0);meta.data.forEach(function(bar,i){var val=chart.data.datasets[0].data[i];if(val===null||val===undefined)return;ctx.save();ctx.font='bold 11px Inter,sans-serif';ctx.fillStyle='#5A6478';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(String(val),bar.x,bar.y-4);ctx.restore();});}};
   chartIndDiaSemana=new Chart(canvas,{
     type:'bar',
+    plugins:[barLabelPlugin],
     data:{labels:labels,datasets:[{data:data,backgroundColor:cores,borderWidth:0,borderRadius:6}]},
     options:{
       responsive:true,
       maintainAspectRatio:false,
+      layout:{padding:{top:18}},
       onClick:function(evt,els){if(els&&els.length){var i=els[0].index;abrirModalDiaSemana(ordem[i],labels[i]);}},
       onHover:function(e,els){if(e&&e.native&&e.native.target)e.native.target.style.cursor=(els&&els.length)?'pointer':'default';},
       plugins:{
