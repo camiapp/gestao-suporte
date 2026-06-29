@@ -193,6 +193,15 @@ tbody tr.row-atrasado:hover td{background:#FFF0F0;}
 .popup-msg strong{color:var(--text);}
 .popup-btn{font-family:'Inter',sans-serif;font-size:14px;font-weight:600;padding:10px 28px;background:var(--blue);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;box-shadow:0 2px 8px rgba(45,91,227,0.3);}
 .popup-btn:hover{background:var(--blue-hover);transform:translateY(-1px);}
+.ds-overlay{display:none;position:fixed;inset:0;background:rgba(15,25,41,0.5);backdrop-filter:blur(4px);z-index:400;align-items:center;justify-content:center;padding:2rem;}
+.ds-overlay.on{display:flex;}
+.ds-modal{background:#fff;border-radius:var(--radius-lg);width:100%;max-width:920px;max-height:85vh;display:flex;flex-direction:column;box-shadow:var(--shadow-md);overflow:hidden;}
+.ds-modal-hdr{display:flex;align-items:flex-start;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);}
+.ds-modal-title{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-0.2px;}
+.ds-modal-sub{font-size:12px;color:var(--text3);margin-top:2px;}
+.ds-modal-close{background:none;border:none;font-size:24px;color:var(--text3);cursor:pointer;line-height:1;padding:2px 8px;border-radius:8px;}
+.ds-modal-close:hover{background:var(--surface2);color:var(--text);}
+.ds-modal-body{overflow:auto;padding:4px 0;}
 .page-indicadores{display:none;}
 .ind-filters{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:var(--shadow-sm);}
 .ind-filters label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;}
@@ -248,6 +257,15 @@ tbody tr.row-atrasado:hover td{background:#FFF0F0;}
     <div class="popup-title">E-mail aberto no Outlook!</div>
     <div class="popup-msg">O Outlook foi aberto com os <strong>destinatários e assunto</strong> já preenchidos.<br><br>Cole o relatório no corpo do e-mail e<br><strong>⚠️ não esqueça de fazer o download do relatório PDF e enviar em anexo também!</strong></div>
     <button class="popup-btn" onclick="fecharPopup()">Entendido!</button>
+  </div>
+</div>
+<div class="ds-overlay" id="dsOverlay" onclick="if(event.target===this)fecharModalDiaSemana()">
+  <div class="ds-modal">
+    <div class="ds-modal-hdr">
+      <div><div class="ds-modal-title" id="dsModalTitle">Chamados</div><div class="ds-modal-sub" id="dsModalSub"></div></div>
+      <button class="ds-modal-close" onclick="fecharModalDiaSemana()">&times;</button>
+    </div>
+    <div class="ds-modal-body" id="dsModalBody"></div>
   </div>
 </div>
 <div id="loginScreen">
@@ -1143,7 +1161,9 @@ function renderIndResp(tasks){
   });
 }
 
+let _diaSemanaTasks=[];
 function renderIndDiaSemana(tasks){
+  _diaSemanaTasks=tasks;
   var nomes=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
   var ordem=[1,2,3,4,5,6,0]; // segunda -> domingo
   var counts=[0,0,0,0,0,0,0];
@@ -1163,6 +1183,8 @@ function renderIndDiaSemana(tasks){
     options:{
       responsive:true,
       maintainAspectRatio:false,
+      onClick:function(evt,els){if(els&&els.length){var i=els[0].index;abrirModalDiaSemana(ordem[i],labels[i]);}},
+      onHover:function(e,els){if(e&&e.native&&e.native.target)e.native.target.style.cursor=(els&&els.length)?'pointer':'default';},
       plugins:{
         legend:{display:false},
         tooltip:{callbacks:{label:function(ctx){return ctx.parsed.y+' chamado'+(ctx.parsed.y!==1?'s':'')}}}
@@ -1174,6 +1196,33 @@ function renderIndDiaSemana(tasks){
     }
   });
 }
+
+function abrirModalDiaSemana(weekday,nomeDia){
+  var lista=_diaSemanaTasks.filter(function(t){return t.date_created&&new Date(Number(t.date_created)).getDay()===weekday;});
+  lista.sort(function(a,b){return Number(b.date_created||0)-Number(a.date_created||0);});
+  document.getElementById('dsModalTitle').textContent='Chamados abertos · '+nomeDia;
+  document.getElementById('dsModalSub').textContent=lista.length+' chamado'+(lista.length!==1?'s':'')+' no período/filtros atuais';
+  var body=document.getElementById('dsModalBody');
+  if(!lista.length){body.innerHTML='<div class="ind-empty">Nenhum chamado neste dia.</div>';}
+  else{
+    var rows='';
+    for(var i=0;i<lista.length;i++){var t=lista[i];
+      var resp=t.assignees&&t.assignees.length>0?t.assignees.map(function(a){return a.username.split(' ')[0];}).join(', '):'—';
+      var link=t.url?'<a href="'+t.url+'" target="_blank" class="btn-open-card" style="font-size:10px;padding:2px 8px">↗ Abrir</a>':'—';
+      rows+='<tr>'
+        +'<td style="font-weight:500;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+escapeHtml(extractEmpresa(t))+'">'+escapeHtml(extractEmpresa(t))+'</td>'
+        +'<td style="max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span class="tipo-tag" style="font-size:10px;padding:2px 6px">'+escapeHtml(extractType(t))+'</span></td>'
+        +'<td style="color:var(--text2)">'+escapeHtml(resp)+'</td>'
+        +'<td style="color:var(--text3);white-space:nowrap">'+fmtDate(t.date_created)+'</td>'
+        +'<td>'+statusBadge(t.status)+'</td>'
+        +'<td>'+link+'</td>'
+        +'</tr>';
+    }
+    body.innerHTML='<table class="resol-table"><thead><tr><th>Cliente</th><th>Tipo de chamado</th><th>Responsável</th><th>Aberto em</th><th>Status</th><th>Link</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  }
+  document.getElementById('dsOverlay').classList.add('on');
+}
+function fecharModalDiaSemana(){document.getElementById('dsOverlay').classList.remove('on');}
 
 function renderIndTipos(tasks,useBase){
   var base=useBase?getIndFilteredSemTipo():tasks;
