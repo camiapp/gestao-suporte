@@ -571,7 +571,7 @@ async function loadData(){
     const url=APPS_SCRIPT_URL+'?action=tasks&start_ms='+range.start.getTime()+'&end_ms='+range.end.getTime();
     const res=await fetch(url);const data=await res.json();
     if(!data.ok)throw new Error(data.erro||'Erro desconhecido.');
-    allTasks=(data.tasks||[]).filter(t=>!isInBotTask(t));
+    allTasks=(data.tasks||[]).filter(t=>isChamadoValido(t));
     activeStatus='all';
     document.querySelectorAll('.pill').forEach(p=>p.classList.toggle('active',p.dataset.s==='all'));
     renderAll(allTasks);
@@ -601,6 +601,8 @@ function extractClient(name){return(name.split('|')[0]||'').trim()||'—';}
 function extractType(t){if(t.tags&&t.tags.length>0)return t.tags.map(x=>x.name).join(', ');const p=t.name.split('|');return p.length>=2?p[1].trim():'outros';}
 function extractEmpresa(t){return extractClient(t.name)||'Sem empresa';}
 function isInBotTask(t){const e=extractEmpresa(t).toLowerCase().trim();return['inbot','inbot teste','inbot testes'].some(x=>e===x||e.startsWith(x+' ')||e.startsWith(x+'|'));}
+function isTesteTask(t){const nome=(t.name||'').toLowerCase();const empresa=extractEmpresa(t).toLowerCase();return nome.indexOf('teste')>=0||empresa.indexOf('teste')>=0;}
+function isChamadoValido(t){return !isInBotTask(t)&&!isTesteTask(t);}
 function getPriorityData(t){
   const p=t.priority;if(!p)return{cls:'none',label:'sem prioridade'};
   let raw='';
@@ -818,7 +820,7 @@ async function loadIndicadores(){
     const url=APPS_SCRIPT_URL+'?action=tasks&start_ms='+startMs+'&end_ms='+endMs;
     const res=await fetch(url);const data=await res.json();
     if(!data.ok)throw new Error(data.erro||'Erro desconhecido.');
-    indTasks=(data.tasks||[]).filter(t=>!isInBotTask(t));
+    indTasks=(data.tasks||[]).filter(t=>isChamadoValido(t));
     indEmpresaSelecionada=null;renderIndicadores();
     document.getElementById('indLastUpd').textContent='Atualizado às '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   }catch(e){showToast('Erro: '+e.message);}
