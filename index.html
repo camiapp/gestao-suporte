@@ -1101,6 +1101,7 @@ function selecionarEmpresa(nome){
     ('Filtrando: '+indEmpresasSelecionadas.length+' empresas');
   document.getElementById('indEmpresaLabel').textContent=label;
 }
+function _semAcento(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();}
 var _rankingEmpresas=[], _rankingMaior=1;
 function renderIndRanking(tasks){
   // tasks já vem filtrado (por empresa e por tipo) — rankeia por esse subconjunto
@@ -1117,11 +1118,11 @@ function _desenharRankingEmpresas(){
   if(!container)return;
   if(!_rankingEmpresas.length){container.innerHTML='<div class="ind-empty">Nenhuma empresa encontrada.</div>';return;}
   var buscaEl=document.getElementById('indRankingBusca');
-  var termo=buscaEl?buscaEl.value.toLowerCase().trim():'';
+  var termo=buscaEl?_semAcento(buscaEl.value):'';
   var html='';
   for(var idx=0;idx<_rankingEmpresas.length;idx++){
     var item=_rankingEmpresas[idx];
-    if(termo && item.nome.toLowerCase().indexOf(termo)<0) continue; // filtro de busca (mantém posição original)
+    if(termo && _semAcento(item.nome).indexOf(termo)<0) continue; // filtro de busca (ignora acentos, mantém posição original)
     var pct=Math.max((item.total/_rankingMaior)*100,4);
     var posCls=idx===0?'top1':idx===1?'top2':idx===2?'top3':'';
     var ativo=indEmpresasSelecionadas.indexOf(item.nome)>=0?'active':'';
