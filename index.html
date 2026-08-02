@@ -568,7 +568,7 @@ async function loadData(){
   setLoading(true,'Buscando chamados...');
   document.querySelectorAll('.btn-tb,.btn-tb-primary,.btn-tb-warn').forEach(b=>b.disabled=true);
   try{
-    const url=APPS_SCRIPT_URL+'?action=tasks&start_ms='+range.start.getTime()+'&end_ms='+range.end.getTime();
+    const url=APPS_SCRIPT_URL+'?action=tasks_hist&start_ms='+range.start.getTime()+'&end_ms='+range.end.getTime();
     const res=await fetch(url);const data=await res.json();
     if(!data.ok)throw new Error(data.erro||'Erro desconhecido.');
     allTasks=(data.tasks||[]).filter(t=>isChamadoValido(t));
@@ -817,7 +817,7 @@ async function loadIndicadores(){
   const endMs=new Date(dtEnd+'T23:59:59').getTime();
   setLoading(true,'Buscando indicadores...');
   try{
-    const url=APPS_SCRIPT_URL+'?action=tasks&start_ms='+startMs+'&end_ms='+endMs;
+    const url=APPS_SCRIPT_URL+'?action=tasks_hist&start_ms='+startMs+'&end_ms='+endMs;
     const res=await fetch(url);const data=await res.json();
     if(!data.ok)throw new Error(data.erro||'Erro desconhecido.');
     indTasks=(data.tasks||[]).filter(t=>isChamadoValido(t));
