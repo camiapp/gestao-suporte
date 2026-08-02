@@ -216,6 +216,9 @@ tbody tr.row-atrasado:hover td{background:#FFF0F0;}
 .ind-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:14px;}
 .ind-chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
 .ind-chart-full{margin-bottom:14px;}
+.ranking-busca{width:100%;font-family:'Inter',sans-serif;font-size:13px;padding:8px 12px;margin-bottom:10px;border:1.5px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text);outline:none;transition:border-color 0.15s,box-shadow 0.15s;}
+.ranking-busca:focus{border-color:var(--blue);background:#fff;box-shadow:0 0 0 3px var(--blue-glow);}
+.ranking-busca::placeholder{color:var(--text3);}
 .ranking-list{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto;padding-right:4px;}
 .ranking-item{display:grid;grid-template-columns:28px 1fr auto 70px;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;transition:all 0.15s;}
 .ranking-item:hover{border-color:var(--blue);background:var(--blue-light);}
@@ -437,6 +440,7 @@ tbody tr.row-atrasado:hover td{background:#FFF0F0;}
         <div class="ind-chart-grid">
           <div class="section-card">
             <div class="section-hdr"><div><div class="section-title">Ranking de empresas</div><div class="section-sub">Clique para filtrar os indicadores por empresa</div></div><span style="font-size:11px;color:var(--text3)" id="indEmpresaLabel"></span></div>
+            <input type="text" id="indRankingBusca" class="ranking-busca" placeholder="🔎 Buscar empresa..." oninput="filtrarRankingEmpresas()" autocomplete="off"/>
             <div class="ranking-list" id="indRankingEmpresas"></div>
           </div>
           <div class="section-card">
@@ -1097,20 +1101,28 @@ function selecionarEmpresa(nome){
     ('Filtrando: '+indEmpresasSelecionadas.length+' empresas');
   document.getElementById('indEmpresaLabel').textContent=label;
 }
+var _rankingEmpresas=[], _rankingMaior=1;
 function renderIndRanking(tasks){
   // tasks já vem filtrado (por empresa e por tipo) — rankeia por esse subconjunto
   var rankingFiltrado=countBy(tasks,extractEmpresa);
-  // Mantém todas as empresas do indTasks visíveis no scroll, mas reordena pelo filtro atual
-  // Se há filtro de tipo ativo, usa só as empresas que aparecem no filtro
-  // Se não há filtro, usa todas as empresas do indTasks
+  // Sem filtro de tipo: usa todas as empresas do indTasks; com filtro: só as do subconjunto
   var rankingBase=indTiposSelecionados.length>0?rankingFiltrado:countBy(indTasks,extractEmpresa);
+  _rankingEmpresas=rankingBase;
+  _rankingMaior=(rankingBase[0]&&rankingBase[0].total)||1;
+  _desenharRankingEmpresas();
+}
+function filtrarRankingEmpresas(){ _desenharRankingEmpresas(); }
+function _desenharRankingEmpresas(){
   var container=document.getElementById('indRankingEmpresas');
-  if(!rankingBase.length){container.innerHTML='<div class="ind-empty">Nenhuma empresa encontrada.</div>';return;}
-  var maior=rankingBase[0].total||1;
+  if(!container)return;
+  if(!_rankingEmpresas.length){container.innerHTML='<div class="ind-empty">Nenhuma empresa encontrada.</div>';return;}
+  var buscaEl=document.getElementById('indRankingBusca');
+  var termo=buscaEl?buscaEl.value.toLowerCase().trim():'';
   var html='';
-  for(var idx=0;idx<rankingBase.length;idx++){
-    var item=rankingBase[idx];
-    var pct=Math.max((item.total/maior)*100,4);
+  for(var idx=0;idx<_rankingEmpresas.length;idx++){
+    var item=_rankingEmpresas[idx];
+    if(termo && item.nome.toLowerCase().indexOf(termo)<0) continue; // filtro de busca (mantém posição original)
+    var pct=Math.max((item.total/_rankingMaior)*100,4);
     var posCls=idx===0?'top1':idx===1?'top2':idx===2?'top3':'';
     var ativo=indEmpresasSelecionadas.indexOf(item.nome)>=0?'active':'';
     html+='<div class="ranking-item '+ativo+'" onclick="selecionarEmpresa(\''+escapeHtml(item.nome).replace(/'/g,"\\'")+'\')">';
@@ -1120,6 +1132,7 @@ function renderIndRanking(tasks){
     html+='<div class="ranking-count">'+item.total+' chamado'+(item.total!==1?'s':'')+'</div>';
     html+='</div>';
   }
+  if(!html) html='<div class="ind-empty">Nenhuma empresa corresponde a “'+escapeHtml(termo)+'”.</div>';
   container.innerHTML=html;
 }
 function renderIndResp(tasks){
