@@ -567,15 +567,41 @@ function periodExportLabel(){
   return s&&e?formatDateOnly(new Date(s+'T00:00:00'))+' a '+formatDateOnly(new Date(e+'T00:00:00')):'Período selecionado';
 }
 
+function monthChunks(startMs,endMs){
+  const chunks=[];let cursor=new Date(startMs);cursor.setHours(0,0,0,0);
+  while(cursor.getTime()<=endMs){
+    const next=new Date(cursor.getFullYear(),cursor.getMonth()+1,1,0,0,0,0);
+    const chunkStart=Math.max(cursor.getTime(),startMs);
+    const chunkEnd=Math.min(next.getTime()-1,endMs);
+    chunks.push({start:chunkStart,end:chunkEnd});
+    cursor=next;
+  }
+  return chunks;
+}
+async function fetchTasksHistChunked(startMs,endMs){
+  const chunks=monthChunks(startMs,endMs);
+  const results=[];
+  for(let i=0;i<chunks.length;i+=3){
+    const batch=chunks.slice(i,i+3);
+    const batchResults=await Promise.all(batch.map(async ch=>{
+      const url=APPS_SCRIPT_URL+'?action=tasks_hist&start_ms='+ch.start+'&end_ms='+ch.end;
+      const res=await fetch(url);const data=await res.json();
+      if(!data.ok)throw new Error(data.erro||'Erro desconhecido.');
+      return data.tasks||[];
+    }));
+    results.push(...batchResults);
+  }
+  const seen={};const out=[];
+  results.flat().forEach(t=>{if(t&&t.id!=null&&!seen[t.id]){seen[t.id]=true;out.push(t);}});
+  return out;
+}
+
 async function loadData(){
   const range=getDateRange();if(!range)return;
   setLoading(true,'Buscando chamados...');
   document.querySelectorAll('.btn-tb,.btn-tb-primary,.btn-tb-warn').forEach(b=>b.disabled=true);
   try{
-    const url=APPS_SCRIPT_URL+'?action=tasks_hist&start_ms='+range.start.getTime()+'&end_ms='+range.end.getTime();
-    const res=await fetch(url);const data=await res.json();
-    if(!data.ok)throw new Error(data.erro||'Erro desconhecido.');
-    allTasks=(data.tasks||[]).filter(t=>isChamadoValido(t));
+    allTasks=(await fetchTasksHistChunked(range.start.getTime(),range.end.getTime())).filter(t=>isChamadoValido(t));
     activeStatus='all';
     document.querySelectorAll('.pill').forEach(p=>p.classList.toggle('active',p.dataset.s==='all'));
     renderAll(allTasks);
@@ -827,10 +853,7 @@ async function loadIndicadores(){
   const endMs=new Date(dtEnd+'T23:59:59').getTime();
   setLoading(true,'Buscando indicadores...');
   try{
-    const url=APPS_SCRIPT_URL+'?action=tasks_hist&start_ms='+startMs+'&end_ms='+endMs;
-    const res=await fetch(url);const data=await res.json();
-    if(!data.ok)throw new Error(data.erro||'Erro desconhecido.');
-    indTasks=(data.tasks||[]).filter(t=>isChamadoValido(t));
+    indTasks=(await fetchTasksHistChunked(startMs,endMs)).filter(t=>isChamadoValido(t));
     indEmpresaSelecionada=null;renderIndicadores();
     document.getElementById('indLastUpd').textContent='Atualizado às '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   }catch(e){showToast('Erro: '+e.message);}
