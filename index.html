@@ -603,13 +603,7 @@ function isDemandaDia(t){return isCriadoHoje(t)||isVenceHoje(t)||isAtrasado(t);}
 function uniqueCount(arr){const ids={};arr.forEach(t=>{if(t&&t.id)ids[t.id]=true;});return Object.keys(ids).length;}
 function extractClient(name){return(name.split('|')[0]||'').trim()||'—';}
 function extractType(t){if(t.tags&&t.tags.length>0)return t.tags.map(x=>x.name).join(', ');const p=t.name.split('|');return p.length>=2?p[1].trim():'outros';}
-function normalizeEmpresa(nome){
-  const raw=String(nome||'').trim();
-  const key=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
-  if(key==='hospital sao camilo'||/^hospital sao camilo\s*-?\s*assistente virtual\b/.test(key))return'Hospital São Camilo';
-  return raw;
-}
-function extractEmpresa(t){return normalizeEmpresa(extractClient(t.name))||'Sem empresa';}
+function extractEmpresa(t){return extractClient(t.name)||'Sem empresa';}
 function isInBotTask(t){const e=extractEmpresa(t).toLowerCase().trim();return['inbot','inbot teste','inbot testes'].some(x=>e===x||e.startsWith(x+' ')||e.startsWith(x+'|'));}
 function isTesteTask(t){const nome=(t.name||'').toLowerCase();const empresa=extractEmpresa(t).toLowerCase();return nome.indexOf('teste')>=0||empresa.indexOf('teste')>=0;}
 function isChamadoValido(t){return !isInBotTask(t)&&!isTesteTask(t);}
